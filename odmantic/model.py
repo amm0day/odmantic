@@ -432,7 +432,9 @@ class ModelMetaclass(BaseModelMetaclass):
     ):
         base = namespace.get('__base__')
         if base:
-            namespace['__annotations__'] = get_annotations(base)
+            annotations = get_annotations(base)
+            annotations.update(namespace.get('__annotations__', {}))
+            namespace['__annotations__'] = annotations
 
         if namespace.get("__module__") != "odmantic.model" and namespace.get(
             "__qualname__"
