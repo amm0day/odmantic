@@ -134,6 +134,16 @@ _IMMUTABLE_TYPES = (
 )
 
 
+def get_annotations(type_: type) -> dict:
+    """Get type annotations of class hierarchy"""
+    d = {}
+    if issubclass(type_, pydantic.BaseModel) and type_ != pydantic.BaseModel:
+        for base in type_.__bases__:
+            d.update(get_annotations(base))
+        d.update(type_.__annotations__)
+    return d
+
+
 def is_type_mutable(type_: Type) -> bool:
     type_origin: Optional[Type] = getattr(type_, "__origin__", None)
     if type_origin is not None:
@@ -420,6 +430,10 @@ class ModelMetaclass(BaseModelMetaclass):
         namespace: Dict[str, Any],
         **kwargs: Any,
     ):
+        base = namespace.get('__base__')
+        if base:
+            namespace['__annotations__'] = get_annotations(base)
+
         if namespace.get("__module__") != "odmantic.model" and namespace.get(
             "__qualname__"
         ) not in ("_BaseODMModel", "Model"):
@@ -466,7 +480,11 @@ class ModelMetaclass(BaseModelMetaclass):
             raise_on_invalid_collection_name(collection_name, cls_name=name)
             namespace["__collection__"] = collection_name
 
-        return super().__new__(mcs, name, bases, namespace, **kwargs)
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        if base:
+            cls.__fields__.update(base.__fields__)   # use original fields
+            cls.__pydantic_model__ = base
+        return cls
 
     def __pos__(cls) -> str:
         return cast(str, getattr(cls, "__collection__"))
