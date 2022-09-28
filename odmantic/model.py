@@ -485,7 +485,6 @@ class ModelMetaclass(BaseModelMetaclass):
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
         if base:
             cls.__fields__.update(base.__fields__)   # use original fields
-            cls.__pydantic_model__ = base
         return cls
 
     def __pos__(cls) -> str:
